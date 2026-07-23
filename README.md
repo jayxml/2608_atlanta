@@ -114,7 +114,7 @@ Pick one decision from your own landscape and ask:
 
 ```bash
 git clone <repository-url>
-cd 2604_rpt1
+cd 2608_atlanta
 ```
 
 Open the folder in your Jupyter environment (SAP Business Application Studio, VS Code, or JupyterLab).

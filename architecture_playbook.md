@@ -2,46 +2,58 @@
 
 # Architecture Playbook: From Workshop-Grade to Production-Grade
 
+> **📖 Best viewed rendered.** For diagrams and tables to display, open **`architecture_playbook.html`** in any browser (renders offline — no setup) — or install the recommended *Markdown Preview Mermaid Support* extension when your editor prompts, then use the Markdown preview.
+
 **Use case:** Just-In-Time (JIT) Supply Chain Risk
+
+**The problem:** unplanned production downtime caused by supplier delivery failures nobody saw coming in time to mitigate. Detect delay risk early enough to act — source alternatively, expedite, or reschedule — before a line-down event. Everything here serves that one outcome.
 
 ---
 
-**The business problem this architecture solves:** unplanned production downtime caused by supplier delivery failures that weren't anticipated in time to mitigate. The goal is to detect delay risk early enough to act — source alternatively, expedite, or adjust production schedules — before a line-down event occurs. Everything in this architecture exists to support that outcome.
+### The Decision Ladder — the spine of this playbook
+
+The workshop built one pattern: **climb only as high as the decision requires — and the higher you climb, the more you govern.** Every section below maps back to a rung.
+
+| Rung | The decision it fits | BTP building block | What you must govern |
+|------|----------------------|--------------------|----------------------|
+| 🔵 **Rules** | Threshold- and policy-driven | CAP business rules / BPA | Audit trail |
+| 🟢 **Predict** | Structured input → risk score | `sap-rpt-1` on AI Core | Accuracy + drift |
+| 🟠 **Reason** | Multi-step, multi-variable mitigation | Agent on Gen AI Hub + governed tools | Reasoning trace + human approval |
+
+> **The rule that never changes:** AI is advisory on every rung. **The agent recommends. The enterprise decides.**
+
+**How to read this playbook** — four recurring markers:
+📘 **Knowledge Point** (the idea) · 🧭 **Decision** (the call you must make in your landscape) · ✅ **Takeaway** (what good looks like) · 🏭 **What breaks in production** (how the workshop-grade version fails at scale).
 
 ---
 
 ### From the Lab to Production
 
-In the hands-on exercises you built a working **Rules → Predict → Reason** ladder: deterministic Green/Amber/Red tiers in Exercise 1A, an SAP-RPT-1 prediction rung with confidence, and a reasoning agent in Exercise 2 that *recommends* but does not decide. **This playbook takes that same pattern from workshop-grade to production-grade** — same ladder, hardened for scale, audit, clean-core boundaries, and governed decision rights on SAP BTP.
+You built the ladder in the exercises: Green/Amber/Red tiers (1A), an SAP-RPT-1 prediction rung with confidence (1B), and a reasoning agent that *recommends* but does not decide (2). **This playbook hardens that same ladder** for scale, audit, clean-core boundaries, and governed decision rights on BTP.
 
-This use case should be positioned as a clean-core, side-by-side SAP BTP extension.
+📘 **Knowledge Point:** The real architectural question is not how to package notebook logic. It is **where to draw the boundary between the digital core (S/4HANA) and the intelligence sidecar (BTP).** This use case is a clean-core, side-by-side extension:
 
-- S/4HANA stays the system of record.
-- SAP BTP hosts prediction, recommendation, workflow, and decision support.
-- HANA Cloud becomes the operational data foundation for production.
-- AI remains advisory until a governed business action is approved.
-
-The architectural discussion is not primarily about packaging notebook logic. It is about defining the right boundary between the digital core and the intelligence sidecar.
+| Layer | Role |
+|-------|------|
+| **S/4HANA** | System of record — stays authoritative |
+| **SAP BTP** | Prediction, recommendation, workflow, decision support |
+| **HANA Cloud** | Operational data foundation for production |
+| **AI** | Advisory until a governed business action is approved |
 
 ## 1. Recommended Production Pattern
 
-The recommended enterprise pattern is a **side-by-side SAP BTP extension** where:
+> **Serves all three rungs** — this is the container the Ladder runs inside.
 
-- **SAP S/4HANA remains the system of record** for procurement transactions, suppliers, materials, and approved business actions
-- **SAP BTP hosts the intelligence sidecar** for data replication, prediction, agentic recommendation, workflow, and user-facing decision support
-- **CAP is the application boundary**, not the system of record
-- **HANA Cloud becomes the operational data foundation** when persistence, analytics, auditability, and repeatable feature computation are needed
+📘 **Knowledge Point:** The enterprise pattern is a **side-by-side BTP extension**, not AI embedded in S/4 custom code.
 
-This is a clean-core extension pattern, not an AI feature embedded directly into S/4 custom code.
+| Principle | Stays in S/4HANA | Lives on BTP |
+|-----------|------------------|--------------|
+| Transactional integrity & business ownership | ✅ | |
+| Prediction, recommendation, orchestration | | ✅ (the sidecar) |
+| Data | System of record | Replicate *only* what scoring needs |
+| Write-back | Receives *approved outcomes only* | CAP controls what crosses back |
 
-### 1.1 Core Design Principle
-
-The clean-core stance is:
-
-- Keep **transactional integrity and business ownership** in S/4HANA
-- Keep **prediction logic, recommendation logic, and orchestration** on SAP BTP
-- Replicate only the data needed for prediction and decision support into the extension layer
-- Write back only approved business outcomes, not raw AI internals, unless there is a specific S/4-native reporting requirement that cannot be served from the BTP sidecar, evaluated case by case
+**CAP is the application boundary, not the system of record. HANA Cloud is the operational data foundation** when persistence, analytics, auditability, and repeatable feature computation are needed.
 
 ### 1.2 Target Solution Architecture
 
@@ -112,39 +124,21 @@ flowchart LR
 
 ### 1.4 What CAP Does in This Architecture
 
-CAP is described as the "application boundary" and "orchestration and governance boundary." In practice, this means:
+📘 **Knowledge Point:** CAP is **the system of control** — the one place where authorization, persistence, approval eligibility, audit, and write-back are enforced. It is *not* a pass-through proxy.
 
-- **Owns the sidecar domain model**: entities such as `RiskAssessments`, `MitigationProposals`, and `ApprovalDecisions` are defined in CDS and persisted to HANA Cloud
-- **Exposes APIs for the UI**: the SAP Fiori or SAPUI5 front end consumes OData or REST services served by CAP
-- **Orchestrates AI calls**: CAP handlers invoke AI Core for prediction and Gen AI Hub orchestration for agent recommendations, then normalize, authorize, and persist the results
-- **Enforces governance**: authorization checks, input validation, and write-back eligibility rules live in the CAP service layer
-- **Mediates write-back to S/4**: only after an approval event does CAP trigger the Integration Suite flow that updates the ERP process
+| CAP's job | What it means here |
+|-----------|--------------------|
+| **Owns the sidecar domain model** | `RiskAssessments`, `MitigationProposals`, `ApprovalDecisions` in CDS, persisted to HANA Cloud |
+| **Exposes APIs for the UI** | Fiori/SAPUI5 consumes OData or REST served by CAP |
+| **Orchestrates AI calls** | Handlers invoke AI Core (predict) and Gen AI Hub (reason), then normalize, authorize, persist |
+| **Enforces governance** | AuthZ checks, input validation, write-back eligibility live in the service layer |
+| **Mediates write-back to S/4** | Only an approval event triggers the Integration Suite flow into ERP |
 
-CAP is not a pass-through proxy. It is the application layer that owns the risk domain on BTP, persists to HANA Cloud, and controls what is allowed to flow back into S/4HANA.
-
-### Architecture Question 1
-
-**If your organization prefers to keep everything in S/4, what are the trade-offs?**
-
-The clean-core position: keep AI outputs in the sidecar, and write back only approved business outcomes or lightweight business references into S/4HANA. Raw predictions, confidence scores, and agent reasoning traces are advisory artifacts — they change frequently, require richer audit storage, and don't belong in ERP tables unless there's a strict reporting requirement that can't be served from BTP.
+**Why this matters for a custom AI solution:** the prediction and the agent are stateless capabilities. Everything that makes the solution *governable* — who may see what, what gets persisted, what is allowed to reach S/4 — lives in CAP. Remove CAP and you have a model with no boundary. (CAP ≠ Joule; see §3.6 for why the control boundary is not the conversation layer.)
 
 ### 1.5 Write-Back: Recommended Position
 
-This is the key clean-core design decision in the target architecture.
-
-**Recommended default:**
-
-- Keep **predictions, confidence, explanations, and agent proposals outside S/4HANA** in the CAP application and BTP persistence layer
-- Write back to S/4HANA only when a **business action has been approved** and must affect the ERP process
-
-**Why this is usually the right design:**
-
-- Raw predictions are advisory artifacts, not authoritative ERP transactions
-- Keeping AI artifacts in the sidecar protects S/4 clean-core integrity
-- The sidecar needs richer audit, trace, and experimentation storage than most ERP tables should carry
-- Model versions and agent traces change more frequently than ERP process design
-
-**Valid write-back patterns:**
+🧭 **Decision:** *What crosses back into S/4HANA?* The clean-core default — **keep predictions, confidence, explanations, and agent proposals in the BTP sidecar; write back to S/4 only when a business action is approved.** Raw AI artifacts are advisory, change frequently, and need richer audit storage than ERP tables should carry. Pick a write-back pattern by intent:
 
 | Pattern | When to use it | Recommended? |
 |---------|----------------|--------------|
@@ -183,18 +177,20 @@ flowchart LR
 
 </div>
 
-In this path, CAP calls S/4 directly for each scoring request, assembles the feature payload, invokes SAP-RPT-1, and returns the result. There is no persistent sidecar — no audit trail, no historical feature store, no feedback loop for accuracy measurement. This works for a demo or narrow pilot but does not scale to production.
+In this path, CAP calls S/4 directly per scoring request, assembles the feature payload, invokes SAP-RPT-1, and returns the result. No persistent sidecar means no audit trail, no historical feature store, no feedback loop. Fine for a demo or narrow pilot; it does not scale.
 
-For this JIT risk use case, once the solution moves beyond a demo into production, **HANA Cloud is the recommended default**, not merely an optional add-on.
+✅ **Takeaway:** Once this JIT use case moves beyond a demo, **HANA Cloud is the recommended default, not an optional add-on.** The full data-pipeline rationale — mesh vs. batch, Integration Suite, and where HANA Cloud earns its place — is in [§4](#4-integration-and-data-architecture-building-the-data-pipeline).
 
 ---
 
 
 ## 2. Architecture Decision Guide — Rules → Predict → Reason
 
-This is the same ladder introduced in the workshop exercises, now framed as a production architecture decision. The three rungs — **Rules** (deterministic policy), **Predict** (`sap-rpt-1` on AI Core), and **Reason** (agentic orchestration) — are choices about *how much AI sophistication a decision actually requires*. Start on the lowest rung that meets the business need, and climb only when the decision genuinely demands it.
+📘 **Knowledge Point:** The three rungs are choices about *how much AI sophistication a decision actually requires* — not a maturity ladder to climb to the top. **Start on the lowest rung that meets the need; climb only when the decision genuinely demands it.** Every step up buys flexibility and costs oversight.
 
 > **Governance rule:** *the higher you climb, the more you govern.* Rules need policy sign-off; Predict adds accuracy monitoring and drift detection; Reason adds tool guardrails, reasoning traces, and human approval before any sourcing-impacting action.
+
+🧭 **Decision:** *Which rung does this decision need?* Match the question to the rung — then follow the climbing order (Rules → Predict → Reason), keeping human approval on any sourcing-impacting action regardless of rung.
 
 | Decision Question | Recommended Rung | Why |
 |------------------|------------------|-----|
@@ -203,22 +199,9 @@ This is the same ladder introduced in the workshop exercises, now framed as a pr
 | Is adaptive multi-step reasoning needed across tools? | **Reason** — Agentic orchestration with guardrails | Adds value only when workflow is ambiguous |
 | Is capability already available in SAP embedded AI/Joule for the same process? | Adopt embedded capability first | Faster time-to-value and lower operational burden |
 
-### Recommended Decision Sequence (Climbing the Ladder)
+🧭 **Decision:** *If prediction already works, what problem is the agent actually solving?* Add an agent **only** where mitigation requires multi-step reasoning across tools, constraints, and trade-offs.
 
-1. **Rules** — Start with deterministic process policy.
-2. **Predict** — Add `sap-rpt-1` where predictive signal measurably improves outcomes.
-3. **Reason** — Introduce agentic orchestration only for decisions that need adaptive, multi-variable reasoning.
-4. Keep human approval for any sourcing-impacting action, regardless of rung.
-
-> Principle: do not optimize for maximum AI sophistication. Optimize for the **minimum rung** on the ladder that reliably delivers the business outcome with clear governance. Every step up buys flexibility and costs oversight.
-
-### Architecture Question 2
-
-**If prediction already works, what problem is the agent actually solving?**
-
-Architectural guidance: start with prediction plus deterministic policy and workflow. Add an agent only where mitigation requires multi-step reasoning across tools, constraints, and trade-offs.
-
-*Example:* The prediction flags a high-risk PO for a critical material. A deterministic rule could trigger a notification, but choosing the right mitigation requires evaluating alternative suppliers against current inventory positions, contractual lead times, quality certifications, landed cost thresholds, and production schedule constraints — simultaneously. That's the kind of multi-variable, trade-off-weighted decision where an agent adds value over static rules.
+> *Example:* The prediction flags a high-risk PO for a critical material. A rule can fire a notification — but choosing the *right* mitigation means weighing alternative suppliers against inventory positions, contractual lead times, quality certifications, landed-cost thresholds, and production-schedule constraints simultaneously. That multi-variable trade-off is where an agent earns its keep over static rules.
 
 ### Trust Chain for Adoption
 
@@ -256,17 +239,15 @@ The model contributes predictive signal, but trust comes from evidence, approval
 
 ### 3.1 Target User Experience
 
-In production, the solution becomes a planner-facing application that does three things well:
+📘 **Knowledge Point:** In production the solution is a planner-facing application — the operational surface where prediction, explanation, recommendation, and approval meet. It does three things well:
 
-- surfaces current PO risk in a business-friendly way
-- shows enough evidence for a human to trust or challenge the recommendation
-- routes mitigation decisions through explicit approval rather than hidden automation
-
-The application becomes the operational surface where prediction, explanation, recommendation, and approval come together.
+- surfaces current PO risk in business-friendly terms
+- shows enough evidence for a human to trust *or challenge* the recommendation
+- routes mitigation through explicit approval, not hidden automation
 
 ### 3.2 Planner Journey
 
-The following sequence illustrates the end-to-end planner experience in the target application:
+End-to-end planner experience in the target application:
 
 ```mermaid
 sequenceDiagram
@@ -327,7 +308,7 @@ sequenceDiagram
 | Early pilot with single approver | Heavier than needed | Simpler and faster to build |
 | Integration with SAP Task Center | Native | Requires additional configuration |
 
-**Recommended default:** use SAP Build Process Automation for any approval flow that involves multiple steps, role-based routing, or compliance requirements. Use lightweight CAP-native logic only for simple single-approver flows in early pilots where speed of implementation is the priority.
+🧭 **Decision:** *BPA or CAP-native for the approval flow?* Use **SAP Build Process Automation** for anything multi-step, role-routed, or compliance-bound. Use lightweight CAP-native logic only for simple single-approver flows in early pilots where build speed wins.
 
 ### 3.5 Application Design Principles
 
@@ -337,33 +318,52 @@ sequenceDiagram
 - Require human approval for any sourcing-impacting step
 - Design for advisory-first rollout, even if later phases add deeper automation
 
-### 3.6 CAP-First with Optional Joule Entry Points
+### 3.6 CAP ≠ Joule — System of Control vs. System of Engagement
 
-For this use case, the target architecture should be **CAP-first with optional Joule entry points**. Joule can be the conversational front door, but it should not hide the business-service boundary where authorization, persistence, approval eligibility, audit, and write-back control are enforced.
+📘 **Knowledge Point:** The most common confusion in these solutions is treating CAP and Joule as alternatives. They answer different questions:
 
-| Customer Question | Recommended Framing | Architecture Implication |
-|-------------------|---------------------|--------------------------|
-| "Can this just be a Joule skill?" | Yes, if the use case is mostly read-only, advisory, or calling an existing governed API. | Use Joule as the engagement layer over existing services. |
-| "Can Joule replace CAP?" | Usually no for this pattern. CAP owns the sidecar domain model, governance boundary, and integration-controlled write-back. | Keep CAP or an equivalent application service as the system of control. |
-| "Where should planners interact?" | Use the best experience for the task: Fiori/SAPUI5 for queue-based triage, Joule for conversational inquiry and guided assistance. | Support both when valuable, with both channels calling the same governed services. |
-| "What if SAP ships an embedded Joule capability for this exact process?" | Adopt the standard embedded capability first if it meets the business and governance requirements. | Use custom CAP/Joule extensions only for gaps, differentiating process logic, or sidecar-specific data. |
+| | **CAP** | **Joule** |
+|---|---------|-----------|
+| **Answers** | *What is allowed?* | *How does the user ask?* |
+| **Role** | System of **control** | System of **engagement** |
+| **Owns** | Domain model, authZ, persistence, approval eligibility, audit, write-back | Conversational front door, natural-language intent |
+| **Can it be removed?** | No — remove it and there is no governance boundary | Yes — it's one of several possible UX surfaces |
 
-The short answer: **do not ask "CAP or Joule?" Ask "what is the system of engagement, and what is the system of control?"** Joule can be the engagement layer; CAP is often the control boundary. Deeper evaluation should be handled as a separate architecture decision.
+**So the UX choice is between two *engagement* surfaces over the *same* CAP control boundary — not an architecture choice:**
+
+| | **CAP + Fiori / SAPUI5** | **CAP + Joule** |
+|---|--------------------------|-----------------|
+| **Best for** | Queue-based triage, dense risk tables, bulk review | Conversational inquiry, guided single-case assistance |
+| **Interaction** | Visual, structured, list-and-drill | Natural language, ask-and-answer |
+| **Governance** | Enforced in CAP — identical either way | Enforced in CAP — identical either way |
+| **Verdict** | Default for the planner triage workflow | Add as a front door; often both, same services |
+
+🧭 **Decision:** Don't ask *"CAP or Joule?"* Ask *"what is the system of engagement, and what is the system of control?"* Joule (and Fiori) are engagement; **CAP is the control boundary.** Where SAP ships an embedded Joule capability for this exact process, adopt it first — build custom CAP/Joule extensions only for genuine gaps, differentiating logic, or sidecar-specific data.
+
+✅ **Takeaway:** Both channels call the same governed CAP services. The control boundary never moves to the conversation layer.
 
 ---
 
-## 4. Integration and Data Architecture
+## 4. Integration and Data Architecture — Building the Data Pipeline
 
-### 4.1 Recommended Integration Pattern
+📘 **Knowledge Point:** The single biggest leap from POC to production is **the data pipeline.** A notebook scores a CSV. Production scores *live operational reality* — continuously, auditably, and without overloading S/4. Get this layer right and every rung of the Ladder becomes operable; get it wrong and the model is accurate on stale data nobody trusts.
 
-The solution needs a governed data flow from S/4HANA into the sidecar so that predictions reflect current operational reality rather than exported snapshots. The cleanest production pattern is a hybrid model:
+The pipeline has three questions: **how data moves** (mesh vs. batch), **how it crosses the boundary** (Integration Suite vs. direct), and **where it lands** (HANA Cloud vs. not).
 
-- use **batch synchronization** for historical context, supplier performance history, and slower-changing reference data
-- use **event-driven updates** for new purchase orders, confirmations, and operational triggers that require near real-time scoring
+### 4.1 How Data Moves — Mesh vs. Batch
 
-This avoids overloading S/4 with repeated read-through queries while still allowing timely decisions on newly created or updated POs.
+🧭 **Decision:** *Real-time or scheduled?* Neither alone — production is a **hybrid**. Match the transport to the data's cadence and the decision's latency need:
 
-Use SAP Event Mesh for simpler BTP eventing patterns. Consider Advanced Event Mesh when the solution needs enterprise-grade event distribution, higher resilience, multi-environment routing, or broader event operations across landscapes.
+| | **Event-driven (Event Mesh)** | **Batch (scheduled sync)** |
+|---|-------------------------------|----------------------------|
+| **Carries** | New/changed POs, confirmations, operational triggers | Historical context, supplier performance, master/reference data |
+| **Latency** | Near real-time (seconds–minutes) | Hours–daily |
+| **Why** | Timely scoring on newly created POs | Slower-changing data doesn't need per-event cost |
+| **Risk if misused** | Over-engineering low-cadence data | Stale scores, missed line-down windows |
+
+**Event Mesh vs. Advanced Event Mesh:** use **SAP Event Mesh** for simpler in-BTP eventing. Move to **Advanced Event Mesh** when you need enterprise-grade distribution, higher resilience, multi-environment routing, or broad event operations across landscapes.
+
+✅ **Takeaway:** Events for POs, batch for master data. The hybrid avoids hammering S/4 with read-through queries while keeping newly created POs scored in time to act.
 
 ### 4.2 Event-Driven Scoring Architecture
 
@@ -385,47 +385,42 @@ flowchart LR
    class AG,NT action;
 ```
 
-Every prediction is persisted to HANA Cloud before downstream processing. This ensures auditability regardless of whether the agent flow triggers.
+Every prediction is persisted to HANA Cloud *before* downstream processing — auditability holds whether or not the agent flow triggers.
 
-### Architecture Question 3
+### 4.3 How Data Crosses the Boundary — Integration Suite vs. Direct
 
-**When is direct read-through from S/4 good enough, and when does it become the wrong design?**
+🧭 **Decision:** *Direct OData or Integration Suite?* Direct calls work for a pilot; production routes through **Integration Suite**.
 
-Architectural guidance: direct read-through can work for a narrow pilot, but production-grade prediction, audit, analytics, and repeatable context assembly typically require HANA Cloud as the sidecar persistence layer.
-
-### 4.3 Trade-offs Discussion
-
-| Decision | Option A | Option B | Recommendation |
-|----------|----------|----------|----------------|
+| Decision | Pilot-grade | Production-grade | Recommendation |
+|----------|-------------|------------------|----------------|
 | **Data sync** | Batch (daily) | Event-driven | Event for POs; Batch for master data |
 | **S/4 access** | Direct OData | Integration Suite | Integration Suite for production |
 | **Context storage** | In-memory | HANA Cloud | HANA Cloud for persistence + analytics |
 | **Scoring trigger** | Scheduled batch | On PO creation | Event-driven for critical; Batch for bulk |
 
-**Why Integration Suite over direct OData for production:** Direct OData calls from CAP to S/4HANA work for a pilot, but Integration Suite adds API throttling and rate limiting to protect S/4 transactional performance, centralized credential and certificate management, transformation and mapping when the S/4 API shape does not match the sidecar model, and monitoring and alerting on integration failures. For a production side-by-side extension, these concerns outweigh the simplicity of direct calls.
+**Why Integration Suite over direct OData for production** — it adds four things a raw call cannot: API throttling and rate limiting to protect S/4 transactional performance; centralized credential and certificate management; transformation/mapping when the S/4 API shape doesn't match the sidecar model; and monitoring/alerting on integration failures. For a side-by-side extension these outweigh the simplicity of direct calls.
 
-### 4.4 HANA Cloud Decision
+### 4.4 Where Data Lands — The HANA Cloud Decision
 
-> This section consolidates the HANA Cloud guidance introduced in Section 1.6 and referenced in Architecture Question 3. The position is intentionally repeated because under-investing in sidecar persistence is the most common architectural gap in these solutions.
+📘 **Knowledge Point:** Under-investing in sidecar persistence is the **most common architectural gap** in these solutions. HANA Cloud is not generically optional — it is optional only for a narrow shape (single-PO scoring, demos). This is the canonical home for that call (§1.6 previews it).
 
-For this use case, HANA Cloud becomes the recommended default once the solution needs any combination of:
+🧭 **Decision:** *Do I need HANA Cloud?* You do the moment you need **any** of these:
 
-- historical feature assembly across suppliers, materials, and delivery outcomes
-- auditability of predictions and recommendations
-- operational analytics and monitoring
-- decoupled scaling from transactional S/4 APIs
+| Need | HANA Cloud? | Why |
+|------|-------------|-----|
+| Single-PO scoring, direct read-through, minimal persistence | Optional | CAP can call S/4 + AI Core directly |
+| Short-lived demo/workshop on CSV or object storage | Optional | Lightweight prototype mode |
+| Historical feature assembly across suppliers, materials, outcomes | **Required** | Repeatable feature computation needs a persisted store |
+| Audit trail, recommendation history, analytics, monitoring | **Required** | Operational governance needs structured persistence |
+| Event-driven scaling, decoupled reporting from S/4 | **Required** | Sidecar store avoids overloading transactional APIs |
 
-If the goal is only a narrow pilot for single-PO scoring, a lighter design may be acceptable. For a production side-by-side extension, HANA Cloud is usually the correct architectural choice.
+✅ **Takeaway:** For a narrow single-PO pilot, a lighter design is acceptable. For a production side-by-side extension, **HANA Cloud is the recommended default.**
 
-### 4.5 Prediction Feedback Loop
+### 4.5 Closing the Loop — Prediction Feedback
 
-The architecture must close the loop between predictions and actual outcomes. Without this, model quality silently degrades over time as supplier behavior, lead times, and procurement patterns shift.
+📘 **Knowledge Point:** The architecture must close the loop between predictions and actual outcomes. Without it, model quality silently degrades as supplier behavior, lead times, and procurement patterns shift — the system keeps scoring, with no way to know if it's still right.
 
-**How actuals flow back:**
-
-- A scheduled batch job reconciles predicted delivery dates against actual goods receipt (GR) postings in S/4HANA
-- The reconciliation result — predicted delay vs. actual delay — is written to HANA Cloud alongside the original prediction record
-- This creates a paired dataset (prediction + outcome) that supports accuracy monitoring and retraining
+**How actuals flow back:** a scheduled batch job reconciles predicted delivery dates against actual goods-receipt (GR) postings in S/4HANA; the result (predicted vs. actual delay) is written to HANA Cloud beside the original prediction — a paired dataset that feeds accuracy monitoring and retraining.
 
 **What this enables:**
 
@@ -459,7 +454,7 @@ Without this feedback loop, the system can generate predictions indefinitely but
 
 ### 5.1 Operational Priorities
 
-Production readiness depends less on code volume and more on governance discipline:
+📘 **Knowledge Point:** Production readiness depends less on code volume than on **governance discipline**:
 
 - secure access to S/4, BTP services, and approval roles
 - persistent audit of predictions, overrides, and approved actions
@@ -514,12 +509,14 @@ Decision rights should be explicit at persona level:
 
 ### 5.4 Suggested Rollout Logic
 
-The most defensible rollout path is:
+🧭 **Decision:** *How fast to automate?* The most defensible path earns trust rung by rung before widening automation:
 
 1. start with advisory prediction
 2. add decision evidence and human approval
 3. introduce agentic mitigation only for the subset of cases where static rules are insufficient
 4. write back approved actions into S/4 only after the operating model is trusted
+
+✅ **Takeaway:** Trust is sequenced, not assumed. Each step proves the prior one before the next unlocks.
 
 ### 5.5 Security and Data Governance (Out of Scope)
 

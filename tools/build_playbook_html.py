@@ -33,20 +33,19 @@ HTML = """<!DOCTYPE html>
 <script>%(MERMAID)s</script>
 <style>
   :root {
-    --ink:#1a1a2e; --muted:#5b6472; --line:#e3e7ec; --accent:#0a6ed1;
-    --bg:#ffffff; --soft:#f7f9fc; --code:#f2f4f8;
-    --rule1:#0a6ed1; --rule2:#107e3e; --rule3:#e9730c;
+    --ink:#1d2d3e; --muted:#556b82; --line:#d5dadd; --accent:#0070f2;
+    --bg:#ffffff; --soft:#f5f6f7; --code:#f5f6f7; --sap-sky:#ebf8ff;
   }
   * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
   body {
     margin:0; background:var(--soft); color:var(--ink);
-    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font:16px/1.65 "72","72 Brand",Arial,Helvetica,sans-serif;
   }
-  .wrap { max-width:920px; margin:0 auto; padding:48px 28px 120px; background:var(--bg);
+  .wrap { max-width:1180px; margin:0 auto; padding:48px 42px 120px; background:var(--bg);
           box-shadow:0 0 0 1px var(--line); }
   h1 { font-size:2rem; line-height:1.2; margin:.2em 0 .4em; letter-spacing:-.01em; }
-  h2 { font-size:1.5rem; margin:2.2em 0 .5em; padding-top:.6em; border-top:2px solid var(--line); }
+  h2 { font-size:1.5rem; margin:2.2em 0 .5em; padding-top:.6em; border-top:2px solid #89d1ff; }
   h3 { font-size:1.18rem; margin:1.8em 0 .4em; color:#26324a; }
   h4 { font-size:1rem; margin:1.4em 0 .3em; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   p, li { color:#222836; }
@@ -60,10 +59,15 @@ HTML = """<!DOCTYPE html>
                background:var(--soft); color:#2a3140; border-radius:0 6px 6px 0; }
   table { border-collapse:collapse; width:100%%; margin:1.2em 0; font-size:.92rem; }
   th, td { border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
-  th { background:#eef3fb; font-weight:600; }
+  th { background:var(--sap-sky); font-weight:600; }
   tr:nth-child(even) td { background:#fbfcfe; }
-  .mermaid { background:var(--soft); border:1px solid var(--line); border-radius:8px;
-             padding:18px; margin:1.4em 0; text-align:center; }
+  .mermaid { background:#fff; border:1px solid #89d1ff; border-radius:16px;
+             padding:24px; margin:1.5em 0; text-align:center; overflow-x:auto; }
+  .mermaid svg { display:block; width:100%% !important; max-width:100%% !important; height:auto; margin:0 auto; }
+  .mermaid p { margin:0 !important; line-height:1.25 !important; }
+  .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .cluster-label {
+    line-height:1.25 !important;
+  }
   .doc-banner { background:linear-gradient(90deg,#eaf3fd,#f7f9fc); border:1px solid #d3e2f5;
                 border-radius:8px; padding:12px 16px; margin:0 0 26px; font-size:.9rem; color:#33465f; }
   .doc-banner b { color:var(--accent); }
@@ -74,7 +78,17 @@ HTML = """<!DOCTYPE html>
                     padding:5px 11px; cursor:pointer; font-size:.82rem; color:var(--ink); }
   .toolbar button:hover { border-color:var(--accent); color:var(--accent); }
   .toolbar .sp { flex:1; }
-  @media print { .toolbar { display:none; } .wrap { box-shadow:none; } body { background:#fff; } }
+  @media (max-width:760px) {
+    .wrap { padding:30px 18px 80px; }
+    table { display:block; overflow-x:auto; white-space:normal; }
+    .mermaid { padding:12px; }
+  }
+  @media print {
+    .toolbar { display:none; }
+    .wrap { max-width:none; padding:20px; box-shadow:none; }
+    body { background:#fff; }
+    .mermaid { break-inside:avoid; }
+  }
 </style>
 </head>
 <body>
@@ -108,8 +122,32 @@ HTML = """<!DOCTYPE html>
 
   document.getElementById("content").innerHTML = marked.parse(raw);
 
-  mermaid.initialize({ startOnLoad:false, theme:"neutral", securityLevel:"loose",
-                       flowchart:{ useMaxWidth:true }, sequence:{ useMaxWidth:true } });
+  mermaid.initialize({
+    startOnLoad:false,
+    theme:"base",
+    securityLevel:"loose",
+    themeVariables:{
+      fontFamily:"72, 72 Brand, Arial, Helvetica, sans-serif",
+      fontSize:"16px",
+      primaryColor:"#EBF8FF",
+      primaryTextColor:"#1D2D3E",
+      primaryBorderColor:"#0070F2",
+      lineColor:"#556B82",
+      secondaryColor:"#F5F6F7",
+      tertiaryColor:"#FFFFFF",
+      clusterBkg:"#EBF8FF",
+      clusterBorder:"#0070F2",
+      edgeLabelBackground:"#FFFFFF"
+    },
+    flowchart:{
+      useMaxWidth:true,
+      htmlLabels:true,
+      curve:"stepAfter",
+      nodeSpacing:52,
+      rankSpacing:58,
+      padding:24
+    }
+  });
   mermaid.run({ querySelector:".mermaid" });
 </script>
 </body>

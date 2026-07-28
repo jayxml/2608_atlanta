@@ -23,7 +23,7 @@ The production pattern is a side-by-side extension on SAP BTP. SAP S/4HANA remai
 ### 1.1 Target Solution Architecture
 
 ```mermaid
-%%{init: {"flowchart": {"curve": "stepAfter", "nodeSpacing": 52, "rankSpacing": 52, "padding": 24}}}%%
+%%{init: {"flowchart": {"curve": "stepAfter", "nodeSpacing": 67, "rankSpacing": 52, "padding": 24}}}%%
 flowchart LR
     PLANNER["Supply chain planner"]
 
@@ -143,7 +143,7 @@ The pipeline has three decisions:
 ### 2.1 Production Data Flow
 
 ```mermaid
-%%{init: {"flowchart": {"curve": "stepAfter", "nodeSpacing": 60, "rankSpacing": 50, "padding": 26}}}%%
+%%{init: {"flowchart": {"curve": "stepAfter", "nodeSpacing": 99, "rankSpacing": 50, "padding": 26}}}%%
 flowchart LR
     subgraph S4["SAP S/4HANA | Operational sources"]
         direction TB

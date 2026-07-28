@@ -62,7 +62,11 @@ HTML = """<!DOCTYPE html>
   th { background:var(--sap-sky); font-weight:600; }
   tr:nth-child(even) td { background:#fbfcfe; }
   .mermaid { background:#fff; border:1px solid #89d1ff; border-radius:16px;
-             padding:24px; margin:1.5em 0; text-align:center; overflow-x:auto; }
+             padding:24px; margin:1.5em 0; text-align:center; overflow-x:auto;
+             /* Metrically-stable font so Mermaid's label measurement matches
+                what the browser paints — the "72" brand font is often not
+                installed on the viewer's machine, which caused box text to clip. */
+             font-family:Arial,Helvetica,sans-serif; }
   .mermaid svg { display:block; width:100%% !important; max-width:100%% !important; height:auto; margin:0 auto; }
   .mermaid p { margin:0 !important; line-height:1.25 !important; }
   .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .cluster-label {
@@ -127,7 +131,7 @@ HTML = """<!DOCTYPE html>
     theme:"base",
     securityLevel:"loose",
     themeVariables:{
-      fontFamily:"72, 72 Brand, Arial, Helvetica, sans-serif",
+      fontFamily:"Arial, Helvetica, sans-serif",
       fontSize:"16px",
       primaryColor:"#EBF8FF",
       primaryTextColor:"#1D2D3E",
